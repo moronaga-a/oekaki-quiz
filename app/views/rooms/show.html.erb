@@ -1,0 +1,124 @@
+<div class="min-h-screen bg-amber-50">
+  <!-- ヘッダー -->
+  <div class="bg-orange-100 border-b-4 border-amber-900">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <h1 class="text-3xl font-black text-amber-900 tracking-tight">🎨 お絵描きクイズ</h1>
+      <div class="flex items-center space-x-4">
+        <span class="text-sm text-amber-900 font-bold uppercase">Room:</span>
+        <span class="font-black text-xl bg-yellow-200 px-4 py-2 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] tracking-widest"><%= @room.id %></span>
+        <button onclick="copyRoomId('<%= @room.id %>')" class="bg-yellow-200 hover:bg-yellow-400 font-black px-4 py-2 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm text-amber-900">
+          IDコピー
+        </button>
+        <%= link_to "退出", root_path, class: "bg-red-600 hover:bg-red-700 text-white font-black px-4 py-2 border-4 border-red-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(127,29,29,1)] hover:shadow-[1px_1px_0px_0px_rgba(127,29,29,1)] transition-all uppercase" %>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <!-- 上部：プレイヤー一覧と状態 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <!-- プレイヤー一覧 -->
+      <div class="bg-orange-100 border-4 border-amber-900 rounded-lg shadow-[6px_6px_0px_0px_rgba(120,53,15,1)] p-4">
+        <h2 class="text-xl font-black text-amber-900 mb-3 uppercase tracking-tight border-b-4 border-dotted border-amber-900 pb-2">👥 プレイヤー (<%= @room.players.size %>/<%= Room::MAX_PLAYERS %>)</h2>
+        <div id="players-list" class="space-y-2 max-h-40 overflow-y-auto">
+          <% if @room.players.empty? %>
+            <p class="text-amber-700 text-sm font-bold">プレイヤーがいません</p>
+          <% else %>
+            <% @room.players.each do |player| %>
+              <div class="flex items-center justify-between p-2 bg-yellow-50 border-2 border-amber-900 rounded">
+                <span class="text-sm font-black text-amber-900"><%= player.name %></span>
+                <% if @room.host?(player.id) %>
+                  <span class="text-xs bg-amber-600 text-white px-2 py-1 border-2 border-amber-900 rounded font-black uppercase">HOST</span>
+                <% end %>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- ゲーム状態 -->
+      <div class="bg-orange-100 border-4 border-amber-900 rounded-lg shadow-[6px_6px_0px_0px_rgba(120,53,15,1)] p-4">
+        <h2 class="text-xl font-black text-amber-900 mb-3 uppercase tracking-tight border-b-4 border-dotted border-amber-900 pb-2">🎮 状態</h2>
+        <% if @room.game_state %>
+          <p class="text-sm font-bold text-amber-900">Status: <span class="font-black uppercase"><%= @room.game_state.status %></span></p>
+        <% else %>
+          <p class="text-sm text-amber-700 font-bold">ゲーム未開始</p>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- 下部：キャンバスとチャット（常に横並び） -->
+    <div class="grid grid-cols-3 gap-4">
+      <!-- キャンバスエリア -->
+      <div class="col-span-2">
+        <div class="bg-orange-100 border-4 border-amber-900 rounded-lg shadow-[6px_6px_0px_0px_rgba(120,53,15,1)] p-4">
+          <h2 class="text-xl font-black text-amber-900 mb-4 uppercase tracking-tight border-b-4 border-dotted border-amber-900 pb-2">🎨 キャンバス</h2>
+          <!-- Canvas要素（後で実装） -->
+          <div class="border-4 border-amber-900 rounded-lg bg-white shadow-inner" style="height: 500px;">
+            <p class="text-center text-amber-600 font-black text-xl pt-48 uppercase tracking-wide">Canvas エリア<br/><span class="text-sm">(後で実装)</span></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- チャットエリア -->
+      <div class="col-span-1">
+        <div class="bg-orange-100 border-4 border-amber-900 rounded-lg shadow-[6px_6px_0px_0px_rgba(120,53,15,1)] p-4 flex flex-col" style="height: 620px;">
+          <h2 class="text-xl font-black text-amber-900 mb-4 uppercase tracking-tight border-b-4 border-dotted border-amber-900 pb-2">💬 チャット</h2>
+
+          <!-- メッセージ一覧 -->
+          <div id="chat-messages" class="flex-1 overflow-y-auto mb-4 space-y-2 bg-yellow-50 border-2 border-amber-900 rounded p-3">
+            <p class="text-amber-700 text-sm text-center font-bold">メッセージがありません</p>
+          </div>
+
+          <!-- メッセージ入力フォーム -->
+          <div>
+            <form class="flex space-x-2">
+              <input type="text" placeholder="メッセージを入力..." class="flex-1 px-3 py-2 border-4 border-amber-900 rounded bg-white focus:outline-none focus:bg-yellow-50 font-bold text-amber-900 text-sm">
+              <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-3 py-2 border-4 border-amber-900 rounded shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm">
+                送信
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <% if flash[:alert] %>
+    <div class="fixed bottom-4 right-4 bg-red-200 border-4 border-red-900 text-red-900 px-6 py-4 shadow-[6px_6px_0px_0px_rgba(127,29,29,1)] font-black rounded-lg">
+      ⚠️ <%= flash[:alert] %>
+    </div>
+  <% end %>
+
+  <script>
+    function copyRoomId(roomId) {
+      const button = event.target.closest('button');
+      const originalText = button.innerHTML;
+
+      // テンポラリのtextarea要素を作成してコピー
+      const textarea = document.createElement('textarea');
+      textarea.value = roomId;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        document.execCommand('copy');
+        const originalClasses = button.className;
+
+        button.innerHTML = '✅ コピー完了!';
+        button.className = originalClasses.replace('bg-yellow-200', 'bg-green-600').replace('hover:bg-yellow-400', '');
+
+        setTimeout(() => {
+          button.innerHTML = originalText;
+          button.className = originalClasses;
+        }, 2000);
+      } catch (err) {
+        alert('コピーに失敗しました。ルームID: ' + roomId);
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+  </script>
+</div>
