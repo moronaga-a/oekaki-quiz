@@ -12,5 +12,10 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   root "rooms#new"
 
-  resources :rooms, only: [:new, :create, :show]
+  resources :rooms, only: [:new, :create, :show] do
+    member do
+      post :start_game
+      post :next_round
+    end
+  end
 end

@@ -36,6 +36,10 @@ module OekakiQuiz
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
 
+    # Add app/services to autoload paths　(Rails 7.1+ではapp/servicesは自動的にオートロードされるはず...)
+    config.autoload_paths << Rails.root.join("app", "services")
+    config.eager_load_paths << Rails.root.join("app", "services")
+
     # Don't generate system test files.
     config.generators.system_tests = nil
   end
