@@ -6,7 +6,7 @@
       <div class="flex items-center space-x-4">
         <span class="text-sm text-amber-900 font-bold uppercase">Room:</span>
         <span class="font-black text-xl bg-yellow-200 px-4 py-2 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] tracking-widest"><%= @room.id %></span>
-        <button onclick="copyRoomId('<%= @room.id %>')" class="bg-yellow-200 hover:bg-yellow-400 font-black px-4 py-2 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm text-amber-900">
+        <button onclick="copyRoomId(event, '<%= @room.id %>')" class="bg-yellow-200 hover:bg-yellow-400 font-black px-4 py-2 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm text-amber-900">
           IDコピー
         </button>
         <%= link_to "退出", root_path, class: "bg-red-600 hover:bg-red-700 text-white font-black px-4 py-2 border-4 border-red-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(127,29,29,1)] hover:shadow-[1px_1px_0px_0px_rgba(127,29,29,1)] transition-all uppercase" %>
@@ -106,33 +106,42 @@
   <% end %>
 
   <script>
-    function copyRoomId(roomId) {
+    async function copyRoomId(event, roomId) {
       const button = event.target.closest('button');
       const originalText = button.innerHTML;
+      const originalClasses = button.className;
 
-      // テンポラリのtextarea要素を作成してコピー
-      const textarea = document.createElement('textarea');
-      textarea.value = roomId;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
+      let success = false;
 
       try {
-        document.execCommand('copy');
-        const originalClasses = button.className;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(roomId);
+          success = true;
+        } else {
+          // フォールバック(非推奨方法だが、ローカルの動作確認用)
+          const textarea = document.createElement('textarea');
+          textarea.value = roomId;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          success = document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
 
-        button.innerHTML = '✅ コピー完了!';
-        button.className = originalClasses.replace('bg-yellow-200', 'bg-green-600').replace('hover:bg-yellow-400', '');
+        if (success) {
+          button.innerHTML = '✅ コピー完了!';
+          button.className = originalClasses.replace('bg-yellow-200', 'bg-green-600').replace('hover:bg-yellow-400', '');
 
-        setTimeout(() => {
-          button.innerHTML = originalText;
-          button.className = originalClasses;
-        }, 2000);
+          setTimeout(() => {
+            button.innerHTML = originalText;
+            button.className = originalClasses;
+          }, 2000);
+        } else {
+          alert('コピーに失敗しました。ルームID: ' + roomId);
+        }
       } catch (err) {
         alert('コピーに失敗しました。ルームID: ' + roomId);
-      } finally {
-        document.body.removeChild(textarea);
       }
     }
   </script>
