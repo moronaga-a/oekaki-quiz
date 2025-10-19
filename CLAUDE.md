@@ -136,10 +136,10 @@ RAILS_ENV=development
 ### フェーズ1: モデル層実装
 
 #### 基盤モデル作成
-- [ ] RoomStore（シングルトンパターン）
-- [ ] Room（ルームクラス）
-- [ ] Player（プレイヤークラス）
-- [ ] GameState（ゲーム状態管理）
+- [x] RoomStore（シングルトンパターン）
+- [x] Room（ルームクラス）
+- [x] Player（プレイヤークラス）
+- [x] GameState（ゲーム状態管理）
 
 ### フェーズ2: ルーム機能実装
 
