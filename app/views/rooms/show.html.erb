@@ -1,4 +1,7 @@
-<div class="min-h-screen bg-amber-50">
+<div class="min-h-screen bg-amber-50"
+     data-controller="game-room"
+     data-game-room-room-id-value="<%= @room.id %>"
+     data-game-room-current-player-id-value="<%= @current_player_id %>">
   <!-- ヘッダー -->
   <div class="bg-orange-100 border-b-4 border-amber-900">
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -19,10 +22,10 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
       <!-- プレイヤー一覧 -->
       <div class="bg-orange-100 border-4 border-amber-900 rounded-lg shadow-[6px_6px_0px_0px_rgba(120,53,15,1)] p-4">
-        <h2 class="text-xl font-black text-amber-900 mb-3 uppercase tracking-tight border-b-4 border-dotted border-amber-900 pb-2">👥 プレイヤー (<%= @room.players.size %>/<%= Room::MAX_PLAYERS %>)</h2>
+        <h2 class="text-xl font-black text-amber-900 mb-3 uppercase tracking-tight border-b-4 border-dotted border-amber-900 pb-2">👥 プレイヤー (<span data-game-room-target="playersCount"><%= @room.players.size %></span>/<%= Room::MAX_PLAYERS %>)</h2>
 
         <!-- プレイヤー一覧 -->
-        <div id="players-list" class="space-y-2 max-h-40 overflow-y-auto">
+        <div data-game-room-target="playersList" class="space-y-2 max-h-40 overflow-y-auto">
           <% if @room.players.empty? %>
             <p class="text-amber-700 text-sm font-bold">プレイヤーがいません</p>
           <% else %>
@@ -47,33 +50,38 @@
       <div class="bg-orange-100 border-4 border-amber-900 rounded-lg shadow-[6px_6px_0px_0px_rgba(120,53,15,1)] p-4">
         <h2 class="text-xl font-black text-amber-900 mb-3 uppercase tracking-tight border-b-4 border-dotted border-amber-900 pb-2">🎮 状態</h2>
 
-        <% if @room.game_state&.playing? %>
-          <!-- ゲーム中 -->
-          <div class="space-y-3">
-            <p class="text-sm font-bold text-amber-900">Status: <span class="font-black uppercase text-green-700"><%= @room.game_state.status %></span></p>
-            <p class="text-sm font-bold text-amber-900">お絵描き: <span class="font-black"><%= @room.find_player(@room.game_state.drawer_id)&.name || '不明' %></span></p>
-            <% if @room.host?(@current_player_id) %>
-              <%= button_to "次のラウンド", next_round_room_path(@room.id), method: :post, class: "w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-2 px-4 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm" %>
-            <% else %>
-              <p class="text-xs text-amber-600 font-bold">※ ホストのみ操作可能</p>
-            <% end %>
-          </div>
-        <% elsif @room.game_state&.finished? %>
-          <!-- ゲーム終了 -->
-          <p class="text-sm font-bold text-amber-900">Status: <span class="font-black uppercase text-red-700">終了</span></p>
-        <% else %>
-          <!-- 待機中 -->
-          <p class="text-sm text-amber-700 font-bold mb-3">ゲーム未開始</p>
-          <% if @room.players.size >= 2 %>
-            <% if @room.host?(@current_player_id) %>
-              <%= button_to "ゲーム開始", start_game_room_path(@room.id), method: :post, class: "w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 px-4 border-4 border-green-900 rounded-lg shadow-[4px_4px_0px_0px_rgba(20,83,45,1)] hover:shadow-[2px_2px_0px_0px_rgba(20,83,45,1)] active:shadow-none transition-all uppercase" %>
-            <% else %>
-              <p class="text-xs text-amber-600 font-bold">※ ホストのみ開始可能</p>
-            <% end %>
+        <div data-game-room-target="gameStatus">
+          <% if @room.game_state&.playing? %>
+            <!-- ゲーム中 -->
+            <div class="space-y-3">
+              <p class="text-sm font-bold text-amber-900">Status: <span class="font-black uppercase text-green-700"><%= @room.game_state.status %></span></p>
+              <p class="text-sm font-bold text-amber-900">お絵描き: <span class="font-black"><%= @room.find_player(@room.game_state.drawer_id)&.name || '不明' %></span></p>
+              <% if @room.host?(@current_player_id) %>
+                <%= button_to "次のラウンド", next_round_room_path(@room.id), method: :post, class: "w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-2 px-4 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm" %>
+              <% else %>
+                <p class="text-xs text-amber-600 font-bold">※ ホストのみ操作可能</p>
+              <% end %>
+            </div>
+          <% elsif @room.game_state&.finished? %>
+            <!-- ゲーム終了 -->
+            <p class="text-sm font-bold text-amber-900">Status: <span class="font-black uppercase text-red-700">終了</span></p>
           <% else %>
-            <p class="text-xs text-amber-600 font-bold">※ 2人以上必要です</p>
+            <!-- 待機中 -->
+            <p class="text-sm text-amber-700 font-bold mb-3">ゲーム未開始</p>
+
+            <div data-game-room-target="gameControls">
+              <% if @room.players.size >= 2 %>
+                <% if @room.host?(@current_player_id) %>
+                  <%= button_to "ゲーム開始", start_game_room_path(@room.id), method: :post, class: "w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 px-4 border-4 border-green-900 rounded-lg shadow-[4px_4px_0px_0px_rgba(20,83,45,1)] hover:shadow-[2px_2px_0px_0px_rgba(20,83,45,1)] active:shadow-none transition-all uppercase" %>
+                <% else %>
+                  <p class="text-xs text-amber-600 font-bold">※ ホストのみ開始可能</p>
+                <% end %>
+              <% else %>
+                <p class="text-xs text-amber-600 font-bold">※ 2人以上必要です</p>
+              <% end %>
+            </div>
           <% end %>
-        <% end %>
+        </div>
       </div>
     </div>
 

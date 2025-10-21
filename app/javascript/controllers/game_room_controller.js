@@ -1,0 +1,189 @@
+import { Controller } from "@hotwired/stimulus"
+// WebSocket接続を使い回して無駄な接続生成を防止
+import consumer from "channels/consumer"
+
+// Connects to data-controller="game-room"
+export default class extends Controller {
+  static targets = ["playersList", "playersCount", "gameControls", "gameStatus"]
+  static values = {
+    roomId: String,
+    currentPlayerId: String
+  }
+
+  connect() {
+    if (this.hasRoomIdValue && this.roomIdValue) {
+      this.connectToGameChannel()
+    }
+  }
+
+  disconnect() {
+    if (this.subscription) {
+      this.subscription.unsubscribe()
+    }
+  }
+
+  connectToGameChannel() {
+    this.subscription = consumer.subscriptions.create(
+      { channel: "GameChannel", room_id: this.roomIdValue },
+      {
+        connected: () => {
+          console.log(`Connected to GameChannel for room ${this.roomIdValue}`)
+        },
+
+        disconnected: () => {
+          console.log("Disconnected from GameChannel")
+        },
+
+        received: (data) => {
+          console.log("Received data:", data)
+
+          switch(data.type) {
+            case 'player_joined':
+              this.handlePlayerJoined(data)
+              break
+            case 'player_left':
+              this.handlePlayerLeft(data)
+              break
+            case 'game_state_updated':
+              this.handleGameStateUpdated(data)
+              break
+          }
+        }
+      }
+    )
+  }
+
+  handlePlayerJoined(data) {
+    this.updatePlayersList(data.players, data.host_id)
+    this.updateGameControls(data.players, data.host_id)
+  }
+
+  handlePlayerLeft(data) {
+    this.updatePlayersList(data.players, data.host_id)
+    this.updateGameControls(data.players, data.host_id)
+  }
+
+  handleGameStateUpdated(data) {
+    this.updateGameState(data.game_state, data.players, data.host_id)
+  }
+
+  updatePlayersList(players, hostId) {
+    if (!this.hasPlayersListTarget) return
+
+    const currentPlayerId = this.currentPlayerIdValue
+
+    if (this.hasPlayersCountTarget) {
+      this.playersCountTarget.textContent = players.length
+    }
+
+    if (players.length === 0) {
+      this.playersListTarget.innerHTML = '<p class="text-amber-700 text-sm font-bold">プレイヤーがいません</p>'
+      return
+    }
+
+    const playersHTML = players.map(player => `
+      <div class="flex items-center justify-between p-2 bg-yellow-50 border-2 border-amber-900 rounded">
+        <span class="text-sm font-black text-amber-900">
+          ${this.escapeHtml(player.name)}
+          ${player.id === currentPlayerId ? '<span class="text-xs text-amber-600">(あなた)</span>' : ''}
+        </span>
+        ${player.id === hostId ? '<span class="text-xs bg-amber-600 text-white px-2 py-1 border-2 border-amber-900 rounded font-black uppercase">HOST</span>' : ''}
+      </div>
+    `).join('')
+
+    this.playersListTarget.innerHTML = playersHTML
+  }
+
+  updateGameControls(players, hostId) {
+    if (!this.hasGameControlsTarget) return
+
+    const currentPlayerId = this.currentPlayerIdValue
+    const isHost = hostId === currentPlayerId
+    const playerCount = players.length
+
+    // ゲーム開始ボタンの表示/非表示
+    if (playerCount >= 2) {
+      if (isHost) {
+        this.gameControlsTarget.innerHTML = `
+          <form action="/rooms/${this.roomIdValue}/start_game" accept-charset="UTF-8" method="post">
+            <input type="hidden" name="_method" value="post" autocomplete="off">
+            <input type="hidden" name="authenticity_token" value="${this.getAuthenticityToken()}" autocomplete="off">
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 px-4 border-4 border-green-900 rounded-lg shadow-[4px_4px_0px_0px_rgba(20,83,45,1)] hover:shadow-[2px_2px_0px_0px_rgba(20,83,45,1)] active:shadow-none transition-all uppercase">ゲーム開始</button>
+          </form>
+        `
+      } else {
+        this.gameControlsTarget.innerHTML = '<p class="text-xs text-amber-600 font-bold">※ ホストのみ開始可能</p>'
+      }
+    } else {
+      this.gameControlsTarget.innerHTML = '<p class="text-xs text-amber-600 font-bold">※ 2人以上必要です</p>'
+    }
+  }
+
+  getAuthenticityToken() {
+    const token = document.querySelector('meta[name="csrf-token"]')
+    return token ? token.content : ''
+  }
+
+  updateGameState(gameState, players, hostId) {
+    if (!this.hasGameStatusTarget) return
+
+    if (!gameState) {
+      // ゲーム状態がない場合（待機中）
+      this.renderWaitingState(players, hostId)
+      return
+    }
+
+    if (gameState.status === 'playing') {
+      this.renderPlayingState(gameState, players, hostId)
+    } else if (gameState.status === 'finished') {
+      this.renderFinishedState()
+    }
+  }
+
+  renderWaitingState(players, hostId) {
+    // ゲーム制御ボタンは別途更新されるので、ここでは待機中メッセージのみ
+    this.gameStatusTarget.innerHTML = `
+      <p class="text-sm text-amber-700 font-bold mb-3">ゲーム未開始</p>
+      <div data-game-room-target="gameControls">
+        <p class="text-xs text-amber-600 font-bold">※ 2人以上必要です</p>
+      </div>
+    `
+    // ゲーム制御ボタンを更新（プレイヤー数を考慮）
+    this.updateGameControls(players, hostId)
+  }
+
+  renderPlayingState(gameState, players, hostId) {
+    const currentPlayerId = this.currentPlayerIdValue
+    const drawer = players.find(p => p.id === gameState.drawer_id)
+    const drawerName = drawer ? this.escapeHtml(drawer.name) : '不明'
+    const isHost = hostId === currentPlayerId
+
+    const hostControls = isHost ? `
+      <form action="/rooms/${this.roomIdValue}/next_round" accept-charset="UTF-8" method="post">
+        <input type="hidden" name="_method" value="post" autocomplete="off">
+        <input type="hidden" name="authenticity_token" value="${this.getAuthenticityToken()}" autocomplete="off">
+        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-2 px-4 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm">次のラウンド</button>
+      </form>
+    ` : '<p class="text-xs text-amber-600 font-bold">※ ホストのみ操作可能</p>'
+
+    this.gameStatusTarget.innerHTML = `
+      <div class="space-y-3">
+        <p class="text-sm font-bold text-amber-900">Status: <span class="font-black uppercase text-green-700">${gameState.status}</span></p>
+        <p class="text-sm font-bold text-amber-900">お絵描き: <span class="font-black">${drawerName}</span></p>
+        ${hostControls}
+      </div>
+    `
+  }
+
+  renderFinishedState() {
+    this.gameStatusTarget.innerHTML = `
+      <p class="text-sm font-bold text-amber-900">Status: <span class="font-black uppercase text-red-700">終了</span></p>
+    `
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div')
+    div.textContent = text
+    return div.innerHTML
+  }
+}

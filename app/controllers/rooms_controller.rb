@@ -30,6 +30,9 @@ class RoomsController < ApplicationController
           session[:player_id] = player_id
           session[:room_id] = room.id
 
+          # WebSocketでプレイヤー参加をブロードキャスト
+          broadcast_room_update(room, 'player_joined', player)
+
           redirect_to room_path(room_id), notice: "#{player.name} として参加しました！"
         else
           redirect_to root_path, alert: 'ルームが満室です'
@@ -56,6 +59,9 @@ class RoomsController < ApplicationController
         # セッションに保存
         session[:player_id] = player_id
         session[:room_id] = room.id
+
+        # WebSocketでプレイヤー参加をブロードキャスト
+        broadcast_room_update(room, 'player_joined', player)
 
         redirect_to room_path(room.id), notice: "ルームを作成しました！"
       else
@@ -85,6 +91,9 @@ class RoomsController < ApplicationController
   def start_game
     game_service = GameService.new(@room)
     if game_service.start_game
+      # WebSocketでゲーム開始をブロードキャスト
+      broadcast_game_state_update(@room)
+
       redirect_to room_path(@room.id), notice: 'ゲームを開始しました！'
     else
       redirect_to room_path(@room.id), alert: 'ゲームを開始できませんでした'
@@ -96,6 +105,9 @@ class RoomsController < ApplicationController
   def next_round
     game_service = GameService.new(@room)
     if game_service.start_round
+      # WebSocketで次のラウンド開始をブロードキャスト
+      broadcast_game_state_update(@room)
+
       redirect_to room_path(@room.id), notice: '次のラウンドを開始しました！'
     else
       redirect_to room_path(@room.id), alert: '次のラウンドを開始できませんでした'
@@ -111,5 +123,31 @@ class RoomsController < ApplicationController
       redirect_to root_path, alert: 'ルームが見つかりません'
       return false # アクションを実行しない
     end
+  end
+
+  # WebSocketでルーム情報の更新をブロードキャスト
+  def broadcast_room_update(room, event_type, player = nil)
+    ActionCable.server.broadcast(
+      "game_channel_#{room.id}",
+      {
+        type: event_type,
+        player: player&.to_h,
+        players: room.players.map(&:to_h),
+        host_id: room.host_id
+      }
+    )
+  end
+
+  # WebSocketでゲーム状態の更新をブロードキャスト
+  def broadcast_game_state_update(room)
+    ActionCable.server.broadcast(
+      "game_channel_#{room.id}",
+      {
+        type: 'game_state_updated',
+        game_state: room.game_state&.to_h,
+        players: room.players.map(&:to_h),
+        host_id: room.host_id
+      }
+    )
   end
 end
