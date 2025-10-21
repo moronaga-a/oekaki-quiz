@@ -49,6 +49,12 @@ export default class extends Controller {
             case 'game_state_updated':
               this.handleGameStateUpdated(data)
               break
+            case 'draw':
+              this.handleDraw(data)
+              break
+            case 'clear_canvas':
+              this.handleClearCanvas(data)
+              break
           }
         }
       }
@@ -69,6 +75,34 @@ export default class extends Controller {
     this.updatePlayersList(data.players, data.host_id)
     this.updateGameControls(data.players, data.host_id)
     this.updateGameState(data.game_state, data.players, data.host_id)
+  }
+
+  handleDraw(data) {
+    // 自分の描画は既にローカルで描画済みなのでスキップ
+    if (data.player_id === this.currentPlayerIdValue) return
+
+    const canvasController = this.application.getControllerForElementAndIdentifier(
+      document.querySelector('[data-controller="canvas"]'),
+      'canvas'
+    )
+
+    if (canvasController) {
+      canvasController.replayDrawing(data.draw_data)
+    }
+  }
+
+  handleClearCanvas(data) {
+    // 自分のクリアは既にローカルで実行済みなのでスキップ
+    if (data.player_id === this.currentPlayerIdValue) return
+
+    const canvasController = this.application.getControllerForElementAndIdentifier(
+      document.querySelector('[data-controller="canvas"]'),
+      'canvas'
+    )
+
+    if (canvasController) {
+      canvasController.clearCanvasReceived()
+    }
   }
 
   updatePlayersList(players, hostId) {

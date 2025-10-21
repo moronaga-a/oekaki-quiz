@@ -53,4 +53,28 @@ class GameChannel < ApplicationCable::Channel
       }
     )
   end
+
+  # 描画データを受信してブロードキャスト
+  def draw(data)
+    stroke = data['stroke']
+    ActionCable.server.broadcast(
+      "game_channel_#{@room_id}",
+      {
+        type: 'draw',
+        player_id: @player_id,
+        draw_data: stroke
+      }
+    )
+  end
+
+  # キャンバスクリアを受信してブロードキャスト
+  def clear_canvas
+    ActionCable.server.broadcast(
+      "game_channel_#{@room_id}",
+      {
+        type: 'clear_canvas',
+        player_id: @player_id
+      }
+    )
+  end
 end
