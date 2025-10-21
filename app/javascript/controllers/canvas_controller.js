@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 // Connects to data-controller="canvas"
 export default class extends Controller {
-  static targets = ["canvas", "toolbar", "spectatorMessage", "spectatorText", "waitingMessage", "canvasContainer"]
+  static targets = ["canvas", "toolbar", "spectatorMessage", "spectatorText", "waitingMessage", "canvasContainer", "topicDisplay", "topicText"]
   static values = {
     isDrawer: Boolean
   }
@@ -68,22 +68,28 @@ export default class extends Controller {
       this.resizeCanvas()
     }, 0)
 
-    // お絵描きプレイヤーかどうかでツールバー/観戦メッセージを切り替え
+    // お絵描きプレイヤーかどうかでツールバー/観戦メッセージ/お題表示を切り替え
     if (this.isDrawerValue) {
-      // お絵描きプレイヤー：ツールバーを表示
+      // お絵描きプレイヤー：ツールバー＋お題表示
       if (this.hasToolbarTarget) {
         this.toolbarTarget.classList.remove('hidden')
       }
       if (this.hasSpectatorMessageTarget) {
         this.spectatorMessageTarget.classList.add('hidden')
       }
+      if (this.hasTopicDisplayTarget) {
+        this.topicDisplayTarget.classList.remove('hidden')
+      }
     } else {
-      // 観戦プレイヤー：観戦メッセージを表示
+      // 観戦プレイヤー：観戦メッセージのみ
       if (this.hasToolbarTarget) {
         this.toolbarTarget.classList.add('hidden')
       }
       if (this.hasSpectatorMessageTarget) {
         this.spectatorMessageTarget.classList.remove('hidden')
+      }
+      if (this.hasTopicDisplayTarget) {
+        this.topicDisplayTarget.classList.add('hidden')
       }
     }
   }
@@ -91,6 +97,13 @@ export default class extends Controller {
   updateDrawerName(name) {
     if (this.hasSpectatorTextTarget) {
       this.spectatorTextTarget.textContent = `※ ${name} が描いています`
+    }
+  }
+
+  updateTopic(topic) {
+    if (this.hasTopicTextTarget) {
+      const topicMain = topic.main || topic['main'] || ''
+      this.topicTextTarget.textContent = topicMain
     }
   }
 

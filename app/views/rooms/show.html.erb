@@ -97,6 +97,14 @@
           <div data-controller="canvas" data-canvas-is-drawer-value="false">
             <!-- Canvas/ツールバーエリア -->
             <div data-canvas-target="canvasContainer" class="space-y-3 hidden">
+              <!-- お題表示（お絵描きプレイヤーのみ） -->
+              <div data-canvas-target="topicDisplay" class="hidden">
+                <div class="bg-yellow-100 border-4 border-amber-900 rounded-lg p-4 text-center">
+                  <p class="text-xs font-bold text-amber-700 mb-2 uppercase">あなたのお題</p>
+                  <p class="text-3xl font-black text-amber-900" data-canvas-target="topicText"></p>
+                </div>
+              </div>
+
               <!-- ツールバー -->
               <div data-canvas-target="toolbar" class="hidden">
                 <div class="flex items-center space-x-2 bg-yellow-50 border-2 border-amber-900 rounded-lg p-2">
@@ -145,12 +153,19 @@
 
           <!-- メッセージ入力フォーム -->
           <div>
-            <form data-action="submit->game-room#sendMessage" class="flex space-x-2">
-              <input type="text" data-game-room-target="messageInput" data-action="keydown->game-room#handleKeydown" placeholder="メッセージを入力 (⌘+Enter で送信)..." class="flex-1 px-3 py-2 border-4 border-amber-900 rounded bg-white focus:outline-none focus:bg-yellow-50 font-bold text-amber-900 text-sm">
-              <button type="button" data-action="click->game-room#sendMessageClick" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-3 py-2 border-4 border-amber-900 rounded shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm">
-                送信
+            <form data-action="submit->game-room#sendMessage" class="flex space-x-2 mb-3">
+              <input type="text" data-game-room-target="messageInput" data-action="keydown->game-room#handleKeydown" placeholder="メッセージを入力 (⌘+Enter でチャット送信)..." class="flex-1 px-3 py-2 border-4 border-amber-900 rounded bg-white focus:outline-none focus:bg-yellow-50 font-bold text-amber-900 text-sm">
+              <button type="button" data-action="click->game-room#sendChatMessage" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-3 py-2 border-4 border-amber-900 rounded shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm">
+                チャット
               </button>
             </form>
+
+            <!-- 回答ボタン（回答プレイヤーのみ） -->
+            <div data-game-room-target="answerButton" class="hidden">
+              <button type="button" data-action="click->game-room#submitAnswer" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 px-4 border-4 border-blue-900 rounded-lg shadow-[4px_4px_0px_0px_rgba(30,58,138,1)] hover:shadow-[2px_2px_0px_0px_rgba(30,58,138,1)] active:shadow-none transition-all uppercase text-sm">
+                💡 回答する
+              </button>
+            </div>
           </div>
         </div>
       </div>

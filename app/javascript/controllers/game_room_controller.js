@@ -4,7 +4,7 @@ import consumer from "channels/consumer"
 
 // Connects to data-controller="game-room"
 export default class extends Controller {
-  static targets = ["playersList", "playersCount", "gameControls", "gameStatus", "canvasArea", "chatMessages", "messageInput"]
+  static targets = ["playersList", "playersCount", "gameControls", "gameStatus", "canvasArea", "chatMessages", "messageInput", "answerButton"]
   static values = {
     roomId: String,
     currentPlayerId: String,
@@ -59,6 +59,12 @@ export default class extends Controller {
             case 'chat_message':
               this.handleChatMessage(data)
               break
+            case 'correct_answer':
+              this.handleCorrectAnswer(data)
+              break
+            case 'incorrect_answer':
+              this.handleIncorrectAnswer(data)
+              break
           }
         }
       }
@@ -79,6 +85,11 @@ export default class extends Controller {
     this.updatePlayersList(data.players, data.host_id)
     this.updateGameControls(data.players, data.host_id)
     this.updateGameState(data.game_state, data.players, data.host_id)
+
+    // 新しいラウンド開始時にチャットをクリア
+    if (data.game_state && data.game_state.status === 'playing') {
+      this.clearChat()
+    }
   }
 
   handleDraw(data) {
@@ -275,6 +286,7 @@ export default class extends Controller {
     if (!gameState || gameState.status !== 'playing') {
       // ゲーム開始前：待機メッセージを表示
       canvasController.showWaiting()
+      this.hideAnswerButton()
       return
     }
 
@@ -287,9 +299,47 @@ export default class extends Controller {
 
     canvasController.showCanvas()
 
-    if (!isDrawer) {
+    if (isDrawer) {
+      // お絵描きプレイヤー：お題を表示、回答ボタン非表示
+      if (gameState.current_topic) {
+        canvasController.updateTopic(gameState.current_topic)
+      }
+      this.hideAnswerButton()
+    } else {
+      // 観戦プレイヤー：描いている人の名前を表示、回答ボタン表示
       canvasController.updateDrawerName(drawerName)
+      this.showAnswerButton()
     }
+  }
+
+  showAnswerButton() {
+    if (this.hasAnswerButtonTarget) {
+      this.answerButtonTarget.classList.remove('hidden')
+    }
+  }
+
+  hideAnswerButton() {
+    if (this.hasAnswerButtonTarget) {
+      this.answerButtonTarget.classList.add('hidden')
+    }
+  }
+
+  clearChat() {
+    if (!this.hasChatMessagesTarget) return
+
+    // チャットメッセージを全削除
+    this.chatMessagesTarget.innerHTML = ''
+
+    // 「新しいラウンド開始」メッセージを追加
+    const messageDiv = document.createElement('div')
+    messageDiv.className = 'p-2 rounded-lg bg-yellow-100 border-2 border-amber-600'
+
+    const notificationText = document.createElement('div')
+    notificationText.className = 'text-xs font-bold text-amber-900 text-center'
+    notificationText.textContent = '🎮 新しいラウンドが始まりました'
+
+    messageDiv.appendChild(notificationText)
+    this.chatMessagesTarget.appendChild(messageDiv)
   }
 
   escapeHtml(text) {
@@ -298,7 +348,7 @@ export default class extends Controller {
     return div.innerHTML
   }
 
-  // Cmd+Enter または Ctrl+Enter でメッセージ送信
+  // Cmd+Enter または Ctrl+Enter でチャット送信
   handleKeydown(event) {
     // Enterキー単押しは何もしない（誤送信防止）
     if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) {
@@ -306,23 +356,32 @@ export default class extends Controller {
       return
     }
 
-    // Cmd+Enter または Ctrl+Enter で送信
+    // Cmd+Enter または Ctrl+Enter でチャット送信
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault()
-      this.sendMessageAction()
+      this.sendChatMessage(event)
     }
   }
 
-  sendMessageClick(event) {
+  // チャット送信ボタンクリック
+  sendChatMessage(event) {
     event.preventDefault()
-    this.sendMessageAction()
+    this.sendMessageToServer(false) // チャットとして送信（判定なし）
   }
 
+  // 回答ボタンクリック
+  submitAnswer(event) {
+    event.preventDefault()
+    this.sendMessageToServer(true) // 回答として送信（判定あり）
+  }
+
+  // フォーム送信（使用しない）
   sendMessage(event) {
     event.preventDefault()
   }
 
-  sendMessageAction() {
+  // メッセージ送信処理（共通）
+  sendMessageToServer(isAnswer = false) {
     if (!this.hasMessageInputTarget) return
 
     const message = this.messageInputTarget.value.trim()
@@ -332,7 +391,8 @@ export default class extends Controller {
     if (this.subscription) {
       this.subscription.perform('send_message', {
         message: message,
-        player_name: this.currentPlayerNameValue
+        player_name: this.currentPlayerNameValue,
+        is_answer: isAnswer
       })
     }
 
@@ -368,6 +428,60 @@ export default class extends Controller {
       emptyMessage.remove()
     }
 
+    this.chatMessagesTarget.appendChild(messageDiv)
+
+    // 最新メッセージまでスクロール
+    this.chatMessagesTarget.scrollTop = this.chatMessagesTarget.scrollHeight
+  }
+
+  // 正解イベント受信
+  handleCorrectAnswer(data) {
+    if (!this.hasChatMessagesTarget) return
+
+    // 正解通知メッセージを作成
+    const messageDiv = document.createElement('div')
+    messageDiv.className = 'p-3 rounded-lg bg-green-100 border-4 border-green-600'
+
+    const notificationText = document.createElement('div')
+    notificationText.className = 'text-sm font-black text-green-900 text-center'
+    notificationText.textContent = `${this.escapeHtml(data.player_name)}さんの回答「${this.escapeHtml(data.answer)}」あたり🎉`
+
+    messageDiv.appendChild(notificationText)
+
+    // 最初のメッセージの場合は「メッセージがありません」を削除
+    const emptyMessage = this.chatMessagesTarget.querySelector('p.text-center')
+    if (emptyMessage) {
+      emptyMessage.remove()
+    }
+
+    // メッセージを追加
+    this.chatMessagesTarget.appendChild(messageDiv)
+
+    // 最新メッセージまでスクロール
+    this.chatMessagesTarget.scrollTop = this.chatMessagesTarget.scrollHeight
+  }
+
+  // 不正解イベント受信
+  handleIncorrectAnswer(data) {
+    if (!this.hasChatMessagesTarget) return
+
+    // 不正解通知メッセージを作成
+    const messageDiv = document.createElement('div')
+    messageDiv.className = 'p-3 rounded-lg bg-red-100 border-4 border-red-600'
+
+    const notificationText = document.createElement('div')
+    notificationText.className = 'text-sm font-black text-red-900 text-center'
+    notificationText.textContent = `${this.escapeHtml(data.player_name)}さんの回答「${this.escapeHtml(data.answer)}」残念😇`
+
+    messageDiv.appendChild(notificationText)
+
+    // 最初のメッセージの場合は「メッセージがありません」を削除
+    const emptyMessage = this.chatMessagesTarget.querySelector('p.text-center')
+    if (emptyMessage) {
+      emptyMessage.remove()
+    }
+
+    // メッセージを追加
     this.chatMessagesTarget.appendChild(messageDiv)
 
     // 最新メッセージまでスクロール

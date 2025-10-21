@@ -82,16 +82,53 @@ class GameChannel < ApplicationCable::Channel
   def send_message(data)
     message = data['message']
     player_name = data['player_name']
+    is_answer = data['is_answer'] # 回答ボタンで送信されたかどうか
 
-    ActionCable.server.broadcast(
-      "game_channel_#{@room_id}",
-      {
-        type: 'chat_message',
-        player_id: @player_id,
-        player_name: player_name,
-        message: message,
-        timestamp: Time.current.iso8601
-      }
-    )
+    # 正誤判定（ゲームプレイ中 かつ 回答ボタンで送信された場合のみ）
+    room = RoomStore.instance.find_room(@room_id)
+    is_playing = room&.game_state&.playing?
+    is_drawer = is_playing && @player_id == room.game_state.drawer_id
+
+    # 正誤判定実行（回答ボタンで送信 かつ プレイ中 かつ お絵描きプレイヤーではない）
+    if is_answer && is_playing && !is_drawer
+      current_topic = room.game_state.current_topic
+      is_correct = TopicService.correct?(message, current_topic)
+
+      if is_correct
+        # 正解イベントをブロードキャスト
+        ActionCable.server.broadcast(
+          "game_channel_#{@room_id}",
+          {
+            type: 'correct_answer',
+            player_id: @player_id,
+            player_name: player_name,
+            answer: current_topic['main'] || current_topic[:main]
+          }
+        )
+      else
+        # 不正解イベントをブロードキャスト
+        ActionCable.server.broadcast(
+          "game_channel_#{@room_id}",
+          {
+            type: 'incorrect_answer',
+            player_id: @player_id,
+            player_name: player_name,
+            answer: message
+          }
+        )
+      end
+    else
+      # 通常のチャットメッセージをブロードキャスト
+      ActionCable.server.broadcast(
+        "game_channel_#{@room_id}",
+        {
+          type: 'chat_message',
+          player_id: @player_id,
+          player_name: player_name,
+          message: message,
+          timestamp: Time.current.iso8601
+        }
+      )
+    end
   end
 end
