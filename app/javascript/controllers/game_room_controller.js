@@ -14,12 +14,30 @@ export default class extends Controller {
   connect() {
     if (this.hasRoomIdValue && this.roomIdValue) {
       this.connectToGameChannel()
+      this.setupUnloadWarning()
     }
   }
 
   disconnect() {
     if (this.subscription) {
       this.subscription.unsubscribe()
+    }
+    this.removeUnloadWarning()
+  }
+
+  setupUnloadWarning() {
+    this.handleBeforeUnload = (event) => {
+      // ページを離れる前に警告を表示
+      event.preventDefault()
+      event.returnValue = '' // Chrome requires returnValue to be set
+      return '' // 一部のブラウザで必要
+    }
+    window.addEventListener('beforeunload', this.handleBeforeUnload)
+  }
+
+  removeUnloadWarning() {
+    if (this.handleBeforeUnload) {
+      window.removeEventListener('beforeunload', this.handleBeforeUnload)
     }
   }
 
