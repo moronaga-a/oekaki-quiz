@@ -4,7 +4,7 @@ import consumer from "channels/consumer"
 
 // Connects to data-controller="game-room"
 export default class extends Controller {
-  static targets = ["playersList", "playersCount", "gameControls", "gameStatus"]
+  static targets = ["playersList", "playersCount", "gameControls", "gameStatus", "canvasArea"]
   static values = {
     roomId: String,
     currentPlayerId: String
@@ -173,13 +173,16 @@ export default class extends Controller {
     if (!gameState) {
       // ゲーム状態がない場合（待機中）
       this.renderWaitingState(players, hostId)
+      this.updateCanvasArea(null, players)
       return
     }
 
     if (gameState.status === 'playing') {
       this.renderPlayingState(gameState, players, hostId)
+      this.updateCanvasArea(gameState, players)
     } else if (gameState.status === 'finished') {
       this.renderFinishedState()
+      this.updateCanvasArea(null, players)
     }
   }
 
@@ -218,6 +221,37 @@ export default class extends Controller {
     this.gameStatusTarget.innerHTML = `
       <p class="text-sm font-bold text-amber-900">状態: <span class="font-black text-red-700">終了</span></p>
     `
+  }
+
+  updateCanvasArea(gameState, players) {
+    // Canvas Controllerを直接操作
+    const canvasController = this.application.getControllerForElementAndIdentifier(
+      document.querySelector('[data-controller="canvas"]'),
+      'canvas'
+    )
+
+    if (!canvasController) return
+
+    const currentPlayerId = this.currentPlayerIdValue
+
+    if (!gameState || gameState.status !== 'playing') {
+      // ゲーム開始前：待機メッセージを表示
+      canvasController.showWaiting()
+      return
+    }
+
+    // プレイ中：Canvasを表示
+    const drawer = players.find(p => p.id === gameState.drawer_id)
+    const drawerName = drawer ? drawer.name : '不明'
+    const isDrawer = gameState.drawer_id === currentPlayerId
+
+    canvasController.isDrawerValue = isDrawer
+
+    canvasController.showCanvas()
+
+    if (!isDrawer) {
+      canvasController.updateDrawerName(drawerName)
+    }
   }
 
   escapeHtml(text) {

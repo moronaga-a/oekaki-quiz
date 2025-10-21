@@ -91,9 +91,43 @@
       <div class="col-span-2">
         <div class="bg-orange-100 border-4 border-amber-900 rounded-lg shadow-[6px_6px_0px_0px_rgba(120,53,15,1)] p-4">
           <h2 class="text-xl font-black text-amber-900 mb-4 uppercase tracking-tight border-b-4 border-dotted border-amber-900 pb-2">🎨 キャンバス</h2>
-          <!-- Canvas要素（後で実装） -->
-          <div class="border-4 border-amber-900 rounded-lg bg-white shadow-inner" style="height: 500px;">
-            <p class="text-center text-amber-600 font-black text-xl pt-48 uppercase tracking-wide">Canvas エリア<br/><span class="text-sm">(後で実装)</span></p>
+
+          <!-- 描画ツール -->
+          <div data-controller="canvas" data-canvas-is-drawer-value="false">
+            <!-- Canvas/ツールバーエリア -->
+            <div data-canvas-target="canvasContainer" class="space-y-3 hidden">
+              <!-- ツールバー -->
+              <div data-canvas-target="toolbar" class="hidden">
+                <div class="flex items-center space-x-2 bg-yellow-50 border-2 border-amber-900 rounded-lg p-2">
+                  <button data-action="click->canvas#selectPen" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-4 py-2 border-2 border-amber-900 rounded shadow-[2px_2px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all text-sm">
+                    ✏️ ペン
+                  </button>
+                  <button data-action="click->canvas#selectEraser" class="text-white font-black px-4 py-2 border-2 rounded shadow-[2px_2px_0px_0px_rgba(75,85,99,1)] hover:shadow-[1px_1px_0px_0px_rgba(75,85,99,1)] active:shadow-none transition-all text-sm" style="background-color: #9CA3AF; border-color: #374151;">
+                    🧹 消しゴム
+                  </button>
+                  <button data-action="click->canvas#clearCanvas" class="bg-red-600 hover:bg-red-700 text-white font-black px-4 py-2 border-2 border-red-900 rounded shadow-[2px_2px_0px_0px_rgba(127,29,29,1)] hover:shadow-[1px_1px_0px_0px_rgba(127,29,29,1)] active:shadow-none transition-all text-sm">
+                    🗑️ リセット
+                  </button>
+                </div>
+              </div>
+
+              <!-- 観戦メッセージ -->
+              <div data-canvas-target="spectatorMessage" class="hidden">
+                <div class="bg-yellow-50 border-2 border-amber-900 rounded-lg p-2">
+                  <p class="text-xs text-amber-700 font-bold text-center" data-canvas-target="spectatorText">※ 観戦中</p>
+                </div>
+              </div>
+
+              <!-- Canvas -->
+              <div class="border-4 border-amber-900 rounded-lg bg-white shadow-inner" style="height: 500px;">
+                <canvas data-canvas-target="canvas" class="w-full h-full rounded cursor-crosshair"></canvas>
+              </div>
+            </div>
+
+            <!-- 待機メッセージ -->
+            <div data-canvas-target="waitingMessage" class="border-4 border-amber-900 rounded-lg bg-white shadow-inner" style="height: 500px;">
+              <p class="text-center text-amber-600 font-black text-xl pt-48 uppercase tracking-wide">ゲーム開始を<br/>お待ちください</p>
+            </div>
           </div>
         </div>
       </div>
