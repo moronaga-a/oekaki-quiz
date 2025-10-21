@@ -24,19 +24,21 @@ export default class extends Controller {
 
   connectToGameChannel() {
     this.subscription = consumer.subscriptions.create(
-      { channel: "GameChannel", room_id: this.roomIdValue },
+      {
+        channel: "GameChannel",
+        room_id: this.roomIdValue,
+        player_id: this.currentPlayerIdValue
+      },
       {
         connected: () => {
-          console.log(`Connected to GameChannel for room ${this.roomIdValue}`)
+          // WebSocket接続成功
         },
 
         disconnected: () => {
-          console.log("Disconnected from GameChannel")
+          // WebSocket切断
         },
 
         received: (data) => {
-          console.log("Received data:", data)
-
           switch(data.type) {
             case 'player_joined':
               this.handlePlayerJoined(data)
@@ -64,6 +66,8 @@ export default class extends Controller {
   }
 
   handleGameStateUpdated(data) {
+    this.updatePlayersList(data.players, data.host_id)
+    this.updateGameControls(data.players, data.host_id)
     this.updateGameState(data.game_state, data.players, data.host_id)
   }
 
@@ -81,15 +85,18 @@ export default class extends Controller {
       return
     }
 
-    const playersHTML = players.map(player => `
-      <div class="flex items-center justify-between p-2 bg-yellow-50 border-2 border-amber-900 rounded">
-        <span class="text-sm font-black text-amber-900">
-          ${this.escapeHtml(player.name)}
-          ${player.id === currentPlayerId ? '<span class="text-xs text-amber-600">(あなた)</span>' : ''}
-        </span>
-        ${player.id === hostId ? '<span class="text-xs bg-amber-600 text-white px-2 py-1 border-2 border-amber-900 rounded font-black uppercase">HOST</span>' : ''}
-      </div>
-    `).join('')
+    const playersHTML = players.map(player => {
+      const isCurrentPlayer = player.id === currentPlayerId
+      return `
+        <div class="flex items-center justify-between p-2 bg-yellow-50 border-2 border-amber-900 rounded">
+          <span class="text-sm font-black text-amber-900">
+            ${this.escapeHtml(player.name)}
+            ${isCurrentPlayer ? '<span class="text-xs text-amber-600">(あなた)</span>' : ''}
+          </span>
+          ${player.id === hostId ? '<span class="text-xs bg-amber-600 text-white px-2 py-1 border-2 border-amber-900 rounded font-black uppercase">HOST</span>' : ''}
+        </div>
+      `
+    }).join('')
 
     this.playersListTarget.innerHTML = playersHTML
   }
@@ -105,17 +112,53 @@ export default class extends Controller {
     if (playerCount >= 2) {
       if (isHost) {
         this.gameControlsTarget.innerHTML = `
-          <form action="/rooms/${this.roomIdValue}/start_game" accept-charset="UTF-8" method="post">
-            <input type="hidden" name="_method" value="post" autocomplete="off">
-            <input type="hidden" name="authenticity_token" value="${this.getAuthenticityToken()}" autocomplete="off">
-            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 px-4 border-4 border-green-900 rounded-lg shadow-[4px_4px_0px_0px_rgba(20,83,45,1)] hover:shadow-[2px_2px_0px_0px_rgba(20,83,45,1)] active:shadow-none transition-all uppercase">ゲーム開始</button>
-          </form>
+          <button data-action="click->game-room#startGame" class="w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 px-4 border-4 border-green-900 rounded-lg shadow-[4px_4px_0px_0px_rgba(20,83,45,1)] hover:shadow-[2px_2px_0px_0px_rgba(20,83,45,1)] active:shadow-none transition-all uppercase">ゲーム開始</button>
         `
       } else {
         this.gameControlsTarget.innerHTML = '<p class="text-xs text-amber-600 font-bold">※ ホストのみ開始可能</p>'
       }
     } else {
       this.gameControlsTarget.innerHTML = '<p class="text-xs text-amber-600 font-bold">※ 2人以上必要です</p>'
+    }
+  }
+
+  async startGame(event) {
+    event.preventDefault()
+
+    try {
+      const response = await fetch(`/rooms/${this.roomIdValue}/start_game`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-Token': this.getAuthenticityToken(),
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        console.error('ゲーム開始に失敗しました')
+      }
+    } catch (error) {
+      console.error('ゲーム開始エラー:', error)
+    }
+  }
+
+  async nextRound(event) {
+    event.preventDefault()
+
+    try {
+      const response = await fetch(`/rooms/${this.roomIdValue}/next_round`, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-Token': this.getAuthenticityToken(),
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        console.error('次のラウンド開始に失敗しました')
+      }
+    } catch (error) {
+      console.error('次のラウンド開始エラー:', error)
     }
   }
 
@@ -159,17 +202,13 @@ export default class extends Controller {
     const isHost = hostId === currentPlayerId
 
     const hostControls = isHost ? `
-      <form action="/rooms/${this.roomIdValue}/next_round" accept-charset="UTF-8" method="post">
-        <input type="hidden" name="_method" value="post" autocomplete="off">
-        <input type="hidden" name="authenticity_token" value="${this.getAuthenticityToken()}" autocomplete="off">
-        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-2 px-4 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm">次のラウンド</button>
-      </form>
+      <button data-action="click->game-room#nextRound" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-2 px-4 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm">次のラウンド</button>
     ` : '<p class="text-xs text-amber-600 font-bold">※ ホストのみ操作可能</p>'
 
     this.gameStatusTarget.innerHTML = `
       <div class="space-y-3">
-        <p class="text-sm font-bold text-amber-900">Status: <span class="font-black uppercase text-green-700">${gameState.status}</span></p>
-        <p class="text-sm font-bold text-amber-900">お絵描き: <span class="font-black">${drawerName}</span></p>
+        <p class="text-sm font-bold text-amber-900">状態: <span class="font-black text-green-700">プレイ中</span></p>
+        <p class="text-sm font-bold text-amber-900">お絵描きプレイヤー: <span class="font-black">${drawerName}</span></p>
         ${hostControls}
       </div>
     `
@@ -177,7 +216,7 @@ export default class extends Controller {
 
   renderFinishedState() {
     this.gameStatusTarget.innerHTML = `
-      <p class="text-sm font-bold text-amber-900">Status: <span class="font-black uppercase text-red-700">終了</span></p>
+      <p class="text-sm font-bold text-amber-900">状態: <span class="font-black text-red-700">終了</span></p>
     `
   }
 

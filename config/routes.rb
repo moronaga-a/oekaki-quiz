@@ -16,6 +16,7 @@ Rails.application.routes.draw do
     member do
       post :start_game
       post :next_round
+      delete :leave
     end
   end
 end

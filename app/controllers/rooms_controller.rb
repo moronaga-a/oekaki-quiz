@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class RoomsController < ApplicationController
-  before_action :set_room, only: [:show, :start_game, :next_round]
+  before_action :set_room, only: [:show, :start_game, :next_round, :leave]
 
   # GET /
   # トップページ（ルーム作成・参加画面）
@@ -94,9 +94,9 @@ class RoomsController < ApplicationController
       # WebSocketでゲーム開始をブロードキャスト
       broadcast_game_state_update(@room)
 
-      redirect_to room_path(@room.id), notice: 'ゲームを開始しました！'
+      head :ok
     else
-      redirect_to room_path(@room.id), alert: 'ゲームを開始できませんでした'
+      head :unprocessable_entity
     end
   end
 
@@ -108,10 +108,34 @@ class RoomsController < ApplicationController
       # WebSocketで次のラウンド開始をブロードキャスト
       broadcast_game_state_update(@room)
 
-      redirect_to room_path(@room.id), notice: '次のラウンドを開始しました！'
+      head :ok
     else
-      redirect_to room_path(@room.id), alert: '次のラウンドを開始できませんでした'
+      head :unprocessable_entity
     end
+  end
+
+  # DELETE /rooms/:id/leave
+  # ルームから退出
+  def leave
+    player_id = session[:player_id]
+
+    unless player_id
+      redirect_to root_path, alert: 'プレイヤー情報がありません' and return
+    end
+
+    player = @room.find_player(player_id)
+    unless player
+      redirect_to root_path, alert: 'プレイヤーが見つかりません' and return
+    end
+
+    removed_player = @room.remove_player(player_id)
+
+    session.delete(:player_id)
+    session.delete(:room_id)
+
+    broadcast_room_update(@room, 'player_left', removed_player)
+
+    redirect_to root_path, notice: 'ルームから退出しました'
   end
 
   private

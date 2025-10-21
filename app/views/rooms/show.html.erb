@@ -7,12 +7,12 @@
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
       <h1 class="text-3xl font-black text-amber-900 tracking-tight">🎨 お絵描きクイズ</h1>
       <div class="flex items-center space-x-4">
-        <span class="text-sm text-amber-900 font-bold uppercase">Room:</span>
+        <span class="text-sm text-amber-900 font-bold uppercase">ルーム:</span>
         <span class="font-black text-xl bg-yellow-200 px-4 py-2 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] tracking-widest"><%= @room.id %></span>
         <button onclick="copyRoomId(event, '<%= @room.id %>')" class="bg-yellow-200 hover:bg-yellow-400 font-black px-4 py-2 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm text-amber-900">
           IDコピー
         </button>
-        <%= link_to "退出", root_path, class: "bg-red-600 hover:bg-red-700 text-white font-black px-4 py-2 border-4 border-red-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(127,29,29,1)] hover:shadow-[1px_1px_0px_0px_rgba(127,29,29,1)] transition-all uppercase" %>
+        <%= button_to "退出", leave_room_path(@room.id), method: :delete, class: "bg-red-600 hover:bg-red-700 text-white font-black px-4 py-2 border-4 border-red-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(127,29,29,1)] hover:shadow-[1px_1px_0px_0px_rgba(127,29,29,1)] transition-all uppercase", data: { turbo_confirm: "本当に退出しますか？" } %>
       </div>
     </div>
   </div>
@@ -54,17 +54,17 @@
           <% if @room.game_state&.playing? %>
             <!-- ゲーム中 -->
             <div class="space-y-3">
-              <p class="text-sm font-bold text-amber-900">Status: <span class="font-black uppercase text-green-700"><%= @room.game_state.status %></span></p>
-              <p class="text-sm font-bold text-amber-900">お絵描き: <span class="font-black"><%= @room.find_player(@room.game_state.drawer_id)&.name || '不明' %></span></p>
+              <p class="text-sm font-bold text-amber-900">状態: <span class="font-black text-green-700">プレイ中</span></p>
+              <p class="text-sm font-bold text-amber-900">お絵描きプレイヤー: <span class="font-black"><%= @room.find_player(@room.game_state.drawer_id)&.name || '不明' %></span></p>
               <% if @room.host?(@current_player_id) %>
-                <%= button_to "次のラウンド", next_round_room_path(@room.id), method: :post, class: "w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-2 px-4 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm" %>
+                <button data-action="click->game-room#nextRound" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-2 px-4 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm">次のラウンド</button>
               <% else %>
                 <p class="text-xs text-amber-600 font-bold">※ ホストのみ操作可能</p>
               <% end %>
             </div>
           <% elsif @room.game_state&.finished? %>
             <!-- ゲーム終了 -->
-            <p class="text-sm font-bold text-amber-900">Status: <span class="font-black uppercase text-red-700">終了</span></p>
+            <p class="text-sm font-bold text-amber-900">状態: <span class="font-black text-red-700">終了</span></p>
           <% else %>
             <!-- 待機中 -->
             <p class="text-sm text-amber-700 font-bold mb-3">ゲーム未開始</p>
@@ -72,7 +72,7 @@
             <div data-game-room-target="gameControls">
               <% if @room.players.size >= 2 %>
                 <% if @room.host?(@current_player_id) %>
-                  <%= button_to "ゲーム開始", start_game_room_path(@room.id), method: :post, class: "w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 px-4 border-4 border-green-900 rounded-lg shadow-[4px_4px_0px_0px_rgba(20,83,45,1)] hover:shadow-[2px_2px_0px_0px_rgba(20,83,45,1)] active:shadow-none transition-all uppercase" %>
+                  <button data-action="click->game-room#startGame" class="w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 px-4 border-4 border-green-900 rounded-lg shadow-[4px_4px_0px_0px_rgba(20,83,45,1)] hover:shadow-[2px_2px_0px_0px_rgba(20,83,45,1)] active:shadow-none transition-all uppercase">ゲーム開始</button>
                 <% else %>
                   <p class="text-xs text-amber-600 font-bold">※ ホストのみ開始可能</p>
                 <% end %>
