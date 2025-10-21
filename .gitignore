@@ -28,10 +28,9 @@
 !/tmp/storage/
 !/tmp/storage/.keep
 
+# Public assets are built during Docker build, so ignore them
 /public/assets
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
-
-/app/assets/builds/*
-!/app/assets/builds/.keep
+DEPLOY.md

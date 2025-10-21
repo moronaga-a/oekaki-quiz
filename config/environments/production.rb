@@ -15,6 +15,9 @@ Rails.application.configure do
   # Turn on fragment caching in view templates.
   config.action_controller.perform_caching = true
 
+  # Serve static files from the /public folder
+  config.public_file_server.enabled = true
+
   # Cache assets for far-future expiry since they are all digest stamped.
   config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.year.to_i}" }
 
@@ -77,4 +80,10 @@ Rails.application.configure do
   #
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+
+  # Action Cable configuration for WebSocket
+  config.action_cable.url = ENV.fetch("ACTION_CABLE_URL") { "wss://#{ENV.fetch('RENDER_EXTERNAL_HOSTNAME', 'localhost')}/cable" }
+  config.action_cable.allowed_request_origins = [
+    ENV.fetch("APP_URL") { "https://#{ENV.fetch('RENDER_EXTERNAL_HOSTNAME', 'localhost')}" }
+  ]
 end
