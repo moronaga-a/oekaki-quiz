@@ -1,7 +1,8 @@
 <div class="min-h-screen bg-amber-50"
      data-controller="game-room"
      data-game-room-room-id-value="<%= @room.id %>"
-     data-game-room-current-player-id-value="<%= @current_player_id %>">
+     data-game-room-current-player-id-value="<%= @current_player_id %>"
+     data-game-room-current-player-name-value="<%= @room.find_player(@current_player_id)&.name || '' %>">
   <!-- ヘッダー -->
   <div class="bg-orange-100 border-b-4 border-amber-900">
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -138,15 +139,15 @@
           <h2 class="text-xl font-black text-amber-900 mb-4 uppercase tracking-tight border-b-4 border-dotted border-amber-900 pb-2">💬 チャット</h2>
 
           <!-- メッセージ一覧 -->
-          <div id="chat-messages" class="flex-1 overflow-y-auto mb-4 space-y-2 bg-yellow-50 border-2 border-amber-900 rounded p-3">
+          <div data-game-room-target="chatMessages" class="flex-1 overflow-y-auto mb-4 space-y-2 bg-yellow-50 border-2 border-amber-900 rounded p-3">
             <p class="text-amber-700 text-sm text-center font-bold">メッセージがありません</p>
           </div>
 
           <!-- メッセージ入力フォーム -->
           <div>
-            <form class="flex space-x-2">
-              <input type="text" placeholder="メッセージを入力..." class="flex-1 px-3 py-2 border-4 border-amber-900 rounded bg-white focus:outline-none focus:bg-yellow-50 font-bold text-amber-900 text-sm">
-              <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-3 py-2 border-4 border-amber-900 rounded shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm">
+            <form data-action="submit->game-room#sendMessage" class="flex space-x-2">
+              <input type="text" data-game-room-target="messageInput" data-action="keydown->game-room#handleKeydown" placeholder="メッセージを入力 (⌘+Enter で送信)..." class="flex-1 px-3 py-2 border-4 border-amber-900 rounded bg-white focus:outline-none focus:bg-yellow-50 font-bold text-amber-900 text-sm">
+              <button type="button" data-action="click->game-room#sendMessageClick" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-3 py-2 border-4 border-amber-900 rounded shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm">
                 送信
               </button>
             </form>

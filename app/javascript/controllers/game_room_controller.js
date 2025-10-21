@@ -4,10 +4,11 @@ import consumer from "channels/consumer"
 
 // Connects to data-controller="game-room"
 export default class extends Controller {
-  static targets = ["playersList", "playersCount", "gameControls", "gameStatus", "canvasArea"]
+  static targets = ["playersList", "playersCount", "gameControls", "gameStatus", "canvasArea", "chatMessages", "messageInput"]
   static values = {
     roomId: String,
-    currentPlayerId: String
+    currentPlayerId: String,
+    currentPlayerName: String
   }
 
   connect() {
@@ -54,6 +55,9 @@ export default class extends Controller {
               break
             case 'clear_canvas':
               this.handleClearCanvas(data)
+              break
+            case 'chat_message':
+              this.handleChatMessage(data)
               break
           }
         }
@@ -292,5 +296,81 @@ export default class extends Controller {
     const div = document.createElement('div')
     div.textContent = text
     return div.innerHTML
+  }
+
+  // Cmd+Enter または Ctrl+Enter でメッセージ送信
+  handleKeydown(event) {
+    // Enterキー単押しは何もしない（誤送信防止）
+    if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) {
+      event.preventDefault()
+      return
+    }
+
+    // Cmd+Enter または Ctrl+Enter で送信
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault()
+      this.sendMessageAction()
+    }
+  }
+
+  sendMessageClick(event) {
+    event.preventDefault()
+    this.sendMessageAction()
+  }
+
+  sendMessage(event) {
+    event.preventDefault()
+  }
+
+  sendMessageAction() {
+    if (!this.hasMessageInputTarget) return
+
+    const message = this.messageInputTarget.value.trim()
+    if (!message) return
+
+    // WebSocket経由でメッセージ送信
+    if (this.subscription) {
+      this.subscription.perform('send_message', {
+        message: message,
+        player_name: this.currentPlayerNameValue
+      })
+    }
+
+    // 入力欄をクリア
+    this.messageInputTarget.value = ''
+  }
+
+  // チャットメッセージ受信
+  handleChatMessage(data) {
+    if (!this.hasChatMessagesTarget) return
+
+    const isOwnMessage = data.player_id === this.currentPlayerIdValue
+
+    // メッセージバブルを作成
+    const messageDiv = document.createElement('div')
+    messageDiv.className = `p-2 rounded-lg ${isOwnMessage ? 'bg-amber-100 border-2 border-amber-600' : 'bg-white border-2 border-amber-900'}`
+
+    const playerNameSpan = document.createElement('div')
+    playerNameSpan.className = 'text-xs font-black text-amber-900 mb-1'
+    playerNameSpan.textContent = `${this.escapeHtml(data.player_name)}${isOwnMessage ? ' (あなた)' : ''}`
+
+    const messageText = document.createElement('div')
+    messageText.className = 'text-sm font-bold text-amber-900'
+    messageText.style.overflowWrap = 'anywhere'
+    messageText.textContent = this.escapeHtml(data.message)
+
+    messageDiv.appendChild(playerNameSpan)
+    messageDiv.appendChild(messageText)
+
+    // 最初のメッセージの場合は「メッセージがありません」を削除
+    const emptyMessage = this.chatMessagesTarget.querySelector('p.text-center')
+    if (emptyMessage) {
+      emptyMessage.remove()
+    }
+
+    this.chatMessagesTarget.appendChild(messageDiv)
+
+    // 最新メッセージまでスクロール
+    this.chatMessagesTarget.scrollTop = this.chatMessagesTarget.scrollHeight
   }
 }

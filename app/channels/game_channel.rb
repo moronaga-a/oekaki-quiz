@@ -77,4 +77,21 @@ class GameChannel < ApplicationCable::Channel
       }
     )
   end
+
+  # チャットメッセージを受信してブロードキャスト
+  def send_message(data)
+    message = data['message']
+    player_name = data['player_name']
+
+    ActionCable.server.broadcast(
+      "game_channel_#{@room_id}",
+      {
+        type: 'chat_message',
+        player_id: @player_id,
+        player_name: player_name,
+        message: message,
+        timestamp: Time.current.iso8601
+      }
+    )
+  end
 end
