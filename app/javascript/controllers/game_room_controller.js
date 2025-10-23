@@ -247,6 +247,11 @@ export default class extends Controller {
   async startGame(event) {
     event.preventDefault()
 
+    console.log('ゲーム開始ボタンがクリックされました', {
+      roomId: this.roomIdValue,
+      playerId: this.currentPlayerIdValue
+    })
+
     try {
       const response = await fetch(`/rooms/${this.roomIdValue}/start_game`, {
         method: 'POST',
@@ -256,16 +261,34 @@ export default class extends Controller {
         }
       })
 
+      console.log('ゲーム開始API レスポンス:', {
+        status: response.status,
+        ok: response.ok
+      })
+
       if (!response.ok) {
-        console.error('ゲーム開始に失敗しました')
+        const errorText = await response.text()
+        console.error('ゲーム開始に失敗しました', {
+          status: response.status,
+          error: errorText
+        })
+        alert('ゲーム開始に失敗しました。ページをリロードしてください。')
+      } else {
+        console.log('ゲーム開始成功')
       }
     } catch (error) {
       console.error('ゲーム開始エラー:', error)
+      alert('ネットワークエラーが発生しました。')
     }
   }
 
   async nextRound(event) {
     event.preventDefault()
+
+    console.log('次のラウンドボタンがクリックされました', {
+      roomId: this.roomIdValue,
+      playerId: this.currentPlayerIdValue
+    })
 
     try {
       const response = await fetch(`/rooms/${this.roomIdValue}/next_round`, {
@@ -276,11 +299,24 @@ export default class extends Controller {
         }
       })
 
+      console.log('次のラウンドAPI レスポンス:', {
+        status: response.status,
+        ok: response.ok
+      })
+
       if (!response.ok) {
-        console.error('次のラウンド開始に失敗しました')
+        const errorText = await response.text()
+        console.error('次のラウンド開始に失敗しました', {
+          status: response.status,
+          error: errorText
+        })
+        alert('次のラウンド開始に失敗しました。ページをリロードしてください。')
+      } else {
+        console.log('次のラウンド開始成功')
       }
     } catch (error) {
       console.error('次のラウンド開始エラー:', error)
+      alert('ネットワークエラーが発生しました。')
     }
   }
 
@@ -325,6 +361,13 @@ export default class extends Controller {
     const drawer = players.find(p => p.id === gameState.drawer_id)
     const drawerName = drawer ? this.escapeHtml(drawer.name) : '不明'
     const isHost = hostId === currentPlayerId
+
+    console.log('ゲーム状態レンダリング:', {
+      currentPlayerId,
+      hostId,
+      isHost,
+      playerCount: players.length
+    })
 
     const hostControls = isHost ? `
       <button data-action="click->game-room#nextRound" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-black py-2 px-4 border-4 border-amber-900 rounded-lg shadow-[3px_3px_0px_0px_rgba(120,53,15,1)] hover:shadow-[1px_1px_0px_0px_rgba(120,53,15,1)] active:shadow-none transition-all uppercase text-sm">次のラウンド</button>

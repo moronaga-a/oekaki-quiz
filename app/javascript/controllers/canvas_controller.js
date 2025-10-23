@@ -9,7 +9,8 @@ export default class extends Controller {
 
   connect() {
     this.canvas = this.canvasTarget
-    this.ctx = this.canvas.getContext('2d')
+    // willReadFrequently を true にして警告を解消
+    this.ctx = this.canvas.getContext('2d', { willReadFrequently: true })
 
     // Canvas サイズ設定
     this.resizeCanvas()
