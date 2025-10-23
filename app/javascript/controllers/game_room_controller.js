@@ -77,18 +77,25 @@ export default class extends Controller {
       },
       {
         connected: () => {
-          console.log('WebSocket接続成功')
+          console.log('✅ WebSocket接続成功', new Date().toLocaleTimeString())
+          this.connectionStatus = 'connected'
           // 再接続時に最新の状態を取得
           this.requestStateUpdate()
         },
 
         disconnected: () => {
-          console.log('WebSocket切断 - 自動再接続を試みます')
+          console.log('❌ WebSocket切断 - 自動再接続を試みます', new Date().toLocaleTimeString())
+          this.connectionStatus = 'disconnected'
           // 自動再接続（Action Cableが自動的に行うが、念のため状態をクリア）
           this.scheduleReconnection()
         },
 
         received: (data) => {
+          console.log('📨 WebSocketメッセージ受信:', {
+            type: data.type,
+            time: new Date().toLocaleTimeString()
+          })
+
           switch(data.type) {
             case 'player_joined':
               this.handlePlayerJoined(data)
@@ -97,6 +104,7 @@ export default class extends Controller {
               this.handlePlayerLeft(data)
               break
             case 'game_state_updated':
+              console.log('🎮 ゲーム状態更新メッセージ受信')
               this.handleGameStateUpdated(data)
               break
             case 'draw':
@@ -114,6 +122,8 @@ export default class extends Controller {
             case 'incorrect_answer':
               this.handleIncorrectAnswer(data)
               break
+            default:
+              console.warn('⚠️ 未知のメッセージタイプ:', data.type)
           }
         }
       }
@@ -285,10 +295,19 @@ export default class extends Controller {
   async nextRound(event) {
     event.preventDefault()
 
-    console.log('次のラウンドボタンがクリックされました', {
+    console.log('🔵 次のラウンドボタンがクリックされました', {
       roomId: this.roomIdValue,
-      playerId: this.currentPlayerIdValue
+      playerId: this.currentPlayerIdValue,
+      websocketStatus: this.connectionStatus || 'unknown',
+      time: new Date().toLocaleTimeString()
     })
+
+    // WebSocket接続状態をチェック
+    if (this.connectionStatus === 'disconnected') {
+      console.warn('⚠️ WebSocket切断中です。再接続を待ってからもう一度お試しください。')
+      alert('接続が切断されています。少し待ってからもう一度お試しください。')
+      return
+    }
 
     try {
       const response = await fetch(`/rooms/${this.roomIdValue}/next_round`, {
@@ -322,7 +341,9 @@ export default class extends Controller {
 
   getAuthenticityToken() {
     const token = document.querySelector('meta[name="csrf-token"]')
-    return token ? token.content : ''
+    const tokenValue = token ? token.content : ''
+    console.log('CSRF Token:', tokenValue ? '存在する' : '見つかりません')
+    return tokenValue
   }
 
   updateGameState(gameState, players, hostId) {
