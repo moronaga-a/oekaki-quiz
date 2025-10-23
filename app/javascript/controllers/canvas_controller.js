@@ -313,4 +313,10 @@ export default class extends Controller {
     this.ctx.fillStyle = '#FFFFFF'
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
   }
+
+  // キャンバスをリセット（次のラウンド用）
+  reset() {
+    this.ctx.fillStyle = '#FFFFFF'
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+  }
 }

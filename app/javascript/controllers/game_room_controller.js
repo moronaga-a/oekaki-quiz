@@ -104,9 +104,10 @@ export default class extends Controller {
     this.updateGameControls(data.players, data.host_id)
     this.updateGameState(data.game_state, data.players, data.host_id)
 
-    // 新しいラウンド開始時にチャットをクリア
+    // 新しいラウンド開始時にチャットとキャンバスをクリア
     if (data.game_state && data.game_state.status === 'playing') {
       this.clearChat()
+      this.resetCanvas()
     }
   }
 
@@ -358,6 +359,18 @@ export default class extends Controller {
 
     messageDiv.appendChild(notificationText)
     this.chatMessagesTarget.appendChild(messageDiv)
+  }
+
+  resetCanvas() {
+    // Canvas Controllerを取得してリセット
+    const canvasController = this.application.getControllerForElementAndIdentifier(
+      document.querySelector('[data-controller="canvas"]'),
+      'canvas'
+    )
+
+    if (canvasController) {
+      canvasController.reset()
+    }
   }
 
   escapeHtml(text) {
