@@ -164,14 +164,35 @@ export default class extends Controller {
   }
 
   handleGameStateUpdated(data) {
-    this.updatePlayersList(data.players, data.host_id)
-    this.updateGameControls(data.players, data.host_id)
-    this.updateGameState(data.game_state, data.players, data.host_id)
+    try {
+      console.log('🔄 handleGameStateUpdated開始', {
+        hasPlayers: !!data.players,
+        hasGameState: !!data.game_state,
+        hostId: data.host_id
+      })
 
-    // 新しいラウンド開始時にチャットとキャンバスをクリア
-    if (data.game_state && data.game_state.status === 'playing') {
-      this.clearChat()
-      this.resetCanvas()
+      this.updatePlayersList(data.players, data.host_id)
+      console.log('  ✓ updatePlayersList完了')
+
+      this.updateGameControls(data.players, data.host_id)
+      console.log('  ✓ updateGameControls完了')
+
+      this.updateGameState(data.game_state, data.players, data.host_id)
+      console.log('  ✓ updateGameState完了')
+
+      // 新しいラウンド開始時にチャットとキャンバスをクリア
+      if (data.game_state && data.game_state.status === 'playing') {
+        this.clearChat()
+        console.log('  ✓ clearChat完了')
+
+        this.resetCanvas()
+        console.log('  ✓ resetCanvas完了')
+      }
+
+      console.log('✅ handleGameStateUpdated完了')
+    } catch (error) {
+      console.error('❌ handleGameStateUpdatedでエラー:', error)
+      console.error('エラースタック:', error.stack)
     }
   }
 
@@ -347,21 +368,40 @@ export default class extends Controller {
   }
 
   updateGameState(gameState, players, hostId) {
-    if (!this.hasGameStatusTarget) return
+    try {
+      console.log('🎯 updateGameState開始', {
+        hasGameStatusTarget: this.hasGameStatusTarget,
+        gameStatus: gameState?.status,
+        playerCount: players?.length
+      })
 
-    if (!gameState) {
-      // ゲーム状態がない場合（待機中）
-      this.renderWaitingState(players, hostId)
-      this.updateCanvasArea(null, players)
-      return
-    }
+      if (!this.hasGameStatusTarget) {
+        console.warn('⚠️ gameStatusTarget が見つかりません')
+        return
+      }
 
-    if (gameState.status === 'playing') {
-      this.renderPlayingState(gameState, players, hostId)
-      this.updateCanvasArea(gameState, players)
-    } else if (gameState.status === 'finished') {
-      this.renderFinishedState()
-      this.updateCanvasArea(null, players)
+      if (!gameState) {
+        // ゲーム状態がない場合（待機中）
+        console.log('  → 待機状態をレンダリング')
+        this.renderWaitingState(players, hostId)
+        this.updateCanvasArea(null, players)
+        return
+      }
+
+      if (gameState.status === 'playing') {
+        console.log('  → プレイ中状態をレンダリング')
+        this.renderPlayingState(gameState, players, hostId)
+        this.updateCanvasArea(gameState, players)
+      } else if (gameState.status === 'finished') {
+        console.log('  → 終了状態をレンダリング')
+        this.renderFinishedState()
+        this.updateCanvasArea(null, players)
+      }
+
+      console.log('✅ updateGameState完了')
+    } catch (error) {
+      console.error('❌ updateGameStateでエラー:', error)
+      console.error('エラースタック:', error.stack)
     }
   }
 
@@ -410,42 +450,59 @@ export default class extends Controller {
   }
 
   updateCanvasArea(gameState, players) {
-    // Canvas Controllerを直接操作
-    const canvasController = this.application.getControllerForElementAndIdentifier(
-      document.querySelector('[data-controller="canvas"]'),
-      'canvas'
-    )
+    try {
+      console.log('🖼️ updateCanvasArea開始')
 
-    if (!canvasController) return
+      // Canvas Controllerを直接操作
+      const canvasElement = document.querySelector('[data-controller="canvas"]')
+      console.log('  Canvas要素:', canvasElement ? '見つかった' : '見つからない')
 
-    const currentPlayerId = this.currentPlayerIdValue
+      const canvasController = this.application.getControllerForElementAndIdentifier(
+        canvasElement,
+        'canvas'
+      )
 
-    if (!gameState || gameState.status !== 'playing') {
-      // ゲーム開始前：待機メッセージを表示
-      canvasController.showWaiting()
-      this.hideAnswerButton()
-      return
-    }
-
-    // プレイ中：Canvasを表示
-    const drawer = players.find(p => p.id === gameState.drawer_id)
-    const drawerName = drawer ? drawer.name : '不明'
-    const isDrawer = gameState.drawer_id === currentPlayerId
-
-    canvasController.isDrawerValue = isDrawer
-
-    canvasController.showCanvas()
-
-    if (isDrawer) {
-      // お絵描きプレイヤー：お題を表示、回答ボタン非表示
-      if (gameState.current_topic) {
-        canvasController.updateTopic(gameState.current_topic)
+      if (!canvasController) {
+        console.warn('⚠️ canvasController が見つかりません')
+        return
       }
-      this.hideAnswerButton()
-    } else {
-      // 観戦プレイヤー：描いている人の名前を表示、回答ボタン表示
-      canvasController.updateDrawerName(drawerName)
-      this.showAnswerButton()
+
+      const currentPlayerId = this.currentPlayerIdValue
+
+      if (!gameState || gameState.status !== 'playing') {
+        // ゲーム開始前：待機メッセージを表示
+        console.log('  → 待機メッセージを表示')
+        canvasController.showWaiting()
+        this.hideAnswerButton()
+        return
+      }
+
+      // プレイ中：Canvasを表示
+      const drawer = players.find(p => p.id === gameState.drawer_id)
+      const drawerName = drawer ? drawer.name : '不明'
+      const isDrawer = gameState.drawer_id === currentPlayerId
+
+      console.log('  → Canvas表示', { isDrawer, drawerName })
+
+      canvasController.isDrawerValue = isDrawer
+      canvasController.showCanvas()
+
+      if (isDrawer) {
+        // お絵描きプレイヤー：お題を表示、回答ボタン非表示
+        if (gameState.current_topic) {
+          canvasController.updateTopic(gameState.current_topic)
+        }
+        this.hideAnswerButton()
+      } else {
+        // 観戦プレイヤー：描いている人の名前を表示、回答ボタン表示
+        canvasController.updateDrawerName(drawerName)
+        this.showAnswerButton()
+      }
+
+      console.log('✅ updateCanvasArea完了')
+    } catch (error) {
+      console.error('❌ updateCanvasAreaでエラー:', error)
+      console.error('エラースタック:', error.stack)
     }
   }
 
