@@ -13,16 +13,29 @@ export default class extends Controller {
 
   connect() {
     if (this.hasRoomIdValue && this.roomIdValue) {
+      // 既存の接続があれば先にクリーンアップ
+      this.disconnectFromGameChannel()
       this.connectToGameChannel()
       this.setupUnloadWarning()
     }
   }
 
   disconnect() {
+    // タイマーをクリーンアップ
+    if (this.reconnectionTimer) {
+      clearTimeout(this.reconnectionTimer)
+      this.reconnectionTimer = null
+    }
+
+    this.disconnectFromGameChannel()
+    this.removeUnloadWarning()
+  }
+
+  disconnectFromGameChannel() {
     if (this.subscription) {
       this.subscription.unsubscribe()
+      this.subscription = null
     }
-    this.removeUnloadWarning()
   }
 
   setupUnloadWarning() {
@@ -42,6 +55,20 @@ export default class extends Controller {
   }
 
   connectToGameChannel() {
+    // 同じパラメータで既存の接続がある場合はスキップ
+    const identifier = JSON.stringify({
+      channel: "GameChannel",
+      room_id: this.roomIdValue,
+      player_id: this.currentPlayerIdValue
+    })
+
+    const existing = consumer.subscriptions.findAll(identifier)
+    if (existing.length > 0) {
+      console.log('既存のWebSocket接続を再利用します')
+      this.subscription = existing[0]
+      return
+    }
+
     this.subscription = consumer.subscriptions.create(
       {
         channel: "GameChannel",
@@ -50,11 +77,15 @@ export default class extends Controller {
       },
       {
         connected: () => {
-          // WebSocket接続成功
+          console.log('WebSocket接続成功')
+          // 再接続時に最新の状態を取得
+          this.requestStateUpdate()
         },
 
         disconnected: () => {
-          // WebSocket切断
+          console.log('WebSocket切断 - 自動再接続を試みます')
+          // 自動再接続（Action Cableが自動的に行うが、念のため状態をクリア）
+          this.scheduleReconnection()
         },
 
         received: (data) => {
@@ -87,6 +118,29 @@ export default class extends Controller {
         }
       }
     )
+  }
+
+  // 再接続スケジュール
+  scheduleReconnection() {
+    // 既存のタイマーをクリア
+    if (this.reconnectionTimer) {
+      clearTimeout(this.reconnectionTimer)
+    }
+
+    // 3秒後に状態更新をリクエスト
+    this.reconnectionTimer = setTimeout(() => {
+      if (this.subscription) {
+        console.log('再接続後の状態更新をリクエスト')
+        this.requestStateUpdate()
+      }
+    }, 3000)
+  }
+
+  // サーバーに最新状態を要求
+  requestStateUpdate() {
+    if (this.subscription) {
+      this.subscription.perform('request_state_update')
+    }
   }
 
   handlePlayerJoined(data) {

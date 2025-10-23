@@ -78,6 +78,23 @@ class GameChannel < ApplicationCable::Channel
     )
   end
 
+  # 状態更新リクエスト（再接続時）
+  def request_state_update
+    room = RoomStore.instance.find_room(@room_id)
+    return unless room
+
+    # 現在の状態を送信
+    ActionCable.server.broadcast(
+      "game_channel_#{@room_id}",
+      {
+        type: 'game_state_updated',
+        players: room.players.map(&:to_h),
+        host_id: room.host_id,
+        game_state: room.game_state&.to_h
+      }
+    )
+  end
+
   # チャットメッセージを受信してブロードキャスト
   def send_message(data)
     message = data['message']
