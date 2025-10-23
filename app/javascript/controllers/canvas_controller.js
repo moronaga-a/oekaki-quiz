@@ -12,9 +12,8 @@ export default class extends Controller {
     // willReadFrequently を true にして警告を解消
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true })
 
-    // Canvas サイズ設定
-    this.resizeCanvas()
-    window.addEventListener('resize', () => this.resizeCanvas())
+    // Canvas初期化（固定サイズ: 800x600）
+    this.initCanvas()
 
     // 描画状態
     this.isDrawing = false
@@ -32,7 +31,7 @@ export default class extends Controller {
   }
 
   disconnect() {
-    window.removeEventListener('resize', () => this.resizeCanvas())
+    // 特に処理なし
   }
 
   isDrawerValueChanged() {
@@ -63,10 +62,9 @@ export default class extends Controller {
       this.canvasContainerTarget.classList.remove('hidden')
     }
 
-    // Canvasが表示されたのでサイズを再計算
-    // setTimeoutで次のフレームまで待つ（DOMの再描画を待つ）
+    // Canvas初期化（背景を白に）
     setTimeout(() => {
-      this.resizeCanvas()
+      this.initCanvas()
     }, 0)
 
     // お絵描きプレイヤーかどうかでツールバー/観戦メッセージ/お題表示を切り替え
@@ -108,28 +106,10 @@ export default class extends Controller {
     }
   }
 
-  resizeCanvas() {
-    // 既存の描画内容を保存
-    const imageData = this.canvas.width > 0 && this.canvas.height > 0
-      ? this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height)
-      : null
-
-    const oldWidth = this.canvas.width
-    const oldHeight = this.canvas.height
-
-    // Canvasの親要素のサイズに合わせる
-    const rect = this.canvas.parentElement.getBoundingClientRect()
-    this.canvas.width = rect.width
-    this.canvas.height = rect.height
-
-    // 背景を白に
+  initCanvas() {
+    // Canvas背景を白に設定（固定サイズ: 800x600）
     this.ctx.fillStyle = '#FFFFFF'
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
-
-    // 描画内容を復元（サイズが変わっていない場合のみ）
-    if (imageData && oldWidth === this.canvas.width && oldHeight === this.canvas.height) {
-      this.ctx.putImageData(imageData, 0, 0)
-    }
   }
 
   setupEventListeners() {
