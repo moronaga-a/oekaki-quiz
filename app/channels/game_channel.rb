@@ -27,17 +27,22 @@ class GameChannel < ApplicationCable::Channel
     stream_from "game_channel_#{room_id}"
     Rails.logger.info "GameChannel: ルーム #{room_id} に接続しました (player_id=#{player_id})"
 
-    # WebSocket接続後にルーム状態をブロードキャスト（他のプレイヤーに通知）
-    player = room.find_player(player_id)
-    ActionCable.server.broadcast(
-      "game_channel_#{room_id}",
-      {
-        type: 'player_joined',
-        player: player&.to_h,
-        players: room.players.map(&:to_h),
-        host_id: room.host_id
-      }
-    )
+    # WebSocket接続後に少し遅延させてからルーム状態をブロードキャスト
+    # stream_fromの完了を待つため
+    ActionCable.server.event_loop.post do
+      player = room.find_player(player_id)
+      Rails.logger.info "GameChannel: player_joined イベントをブロードキャスト (player_id=#{player_id}, player_name=#{player&.name})"
+
+      ActionCable.server.broadcast(
+        "game_channel_#{room_id}",
+        {
+          type: 'player_joined',
+          player: player&.to_h,
+          players: room.players.map(&:to_h),
+          host_id: room.host_id
+        }
+      )
+    end
   end
 
   def unsubscribed

@@ -154,6 +154,12 @@ export default class extends Controller {
   }
 
   handlePlayerJoined(data) {
+    console.log('👤 handlePlayerJoined呼び出し', {
+      player: data.player,
+      playersCount: data.players?.length,
+      hostId: data.host_id,
+      currentPlayerId: this.currentPlayerIdValue
+    })
     this.updatePlayersList(data.players, data.host_id)
     this.updateGameControls(data.players, data.host_id)
   }
@@ -225,7 +231,17 @@ export default class extends Controller {
   }
 
   updatePlayersList(players, hostId) {
-    if (!this.hasPlayersListTarget) return
+    console.log('📋 updatePlayersList呼び出し', {
+      hasTarget: this.hasPlayersListTarget,
+      playersCount: players?.length,
+      playerNames: players?.map(p => p.name),
+      hostId
+    })
+
+    if (!this.hasPlayersListTarget) {
+      console.warn('⚠️ playersListTarget が見つかりません')
+      return
+    }
 
     const currentPlayerId = this.currentPlayerIdValue
 
@@ -252,6 +268,7 @@ export default class extends Controller {
     }).join('')
 
     this.playersListTarget.innerHTML = playersHTML
+    console.log('✅ プレイヤーリスト更新完了')
   }
 
   updateGameControls(players, hostId) {
