@@ -43,7 +43,7 @@ RAILS_ENV=development
 - **[モデル構造図.md](./docs/モデル構造図.md)** - RoomStore, Room, Player, GameStateの構造と関係性
 - **[Canvas動作シーケンス図.md](./docs/Canvas動作シーケンス図.md)** - Canvas描画のリアルタイム同期
 - **[チャット機能シーケンス図.md](./docs/チャット機能シーケンス図.md)** - チャット機能と正誤判定
-- **[リアルタイム通信シーケンス図.md](./docs/リアルタイム通信シーケンス図.md)** - Action Cableの通信の仕組み
+- **[リアルタイム通信シーケンス図.md](./docs/リアルタイム通信.md)** - Action Cableの通信の仕組み
 
 ---
 
